@@ -47,18 +47,12 @@ class Point:
     def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
+
         self.head = None
 
     def addHead(self, pt):
         assert isinstance(pt, Point)
         self.head = pt
-
-# A data structure for queue used in BFS
-class queueNode:
-    def __init__(self, pt: Point, dist: int):
-        self.head = None
-        self.pt = pt  # The coordinates of the cell
-        self.dist = dist  # Cell's distance from the source
 
 
 # Draw path function
@@ -84,8 +78,8 @@ def printMap(map):
 
 # These arrays are used to get row and column
 # numbers of 4 neighbours of a given cell
-rowNum = [-1, 0, 0, 1]
-colNum = [0, -1, 1, 0]
+rowNum = [1, 0, 0, 1]
+colNum = [0, 1, 1, 0]
 
 def bfs(map, start: Point, end: Point):
     # Declare the visited array
@@ -97,24 +91,20 @@ def bfs(map, start: Point, end: Point):
     q = deque()
 
     # Distance of source cell is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue source cell
+    q.append(start)  # Enqueue source cell
 
     while q:
 
         curr = q.popleft()  # Dequeue the front cell
 
-        # If we have reached the destination cell,
-        # we are done
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
-            drawPath(pt)
-            return curr.dist
+        if curr.x == end.x and curr.y == end.y:
+            drawPath(curr)
+            return 1
 
         # Otherwise enqueue its adjacent cells
         for i in range(4):
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
+            row = curr.x + rowNum[i]
+            col = curr.y + colNum[i]
 
             # if adjacent cell is valid, has path
             # and not visited yet, enqueue it.
@@ -122,10 +112,9 @@ def bfs(map, start: Point, end: Point):
                     map[row][col] == '1' ):
                 visited[row][col] = True
                 childPoint = Point(row, col)
-                childPoint.addHead(pt)
-                Adjcell = queueNode(childPoint,
-                                    curr.dist + 1)
-                q.append(Adjcell)
+                childPoint.addHead(curr)
+
+                q.append(childPoint)
 
         # Return -1 if destination cannot be reached
 
