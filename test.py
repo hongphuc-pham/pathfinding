@@ -139,10 +139,8 @@ def main():
 
     dist = bfs(map, start, end)
     if dist != -1:
-        print("Shortest Path is", dist)
+        printMap(map)
     else:
-        print("Shortest Path doesn't exist")
-
-    printMap(map)
+        print("null")
 
 main()
