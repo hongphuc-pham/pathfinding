@@ -56,6 +56,7 @@ class Point:
 # A data structure for queue used in BFS
 class queueNode:
     def __init__(self, pt: Point, dist: int):
+        self.head = None
         self.pt = pt  # The coordinates of the cell
         self.dist = dist  # Cell's distance from the source
 
