@@ -44,21 +44,15 @@ def isValid( row, col, visited):
     return True
 
 class Point:
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, cost: int):
         self.x = x
         self.y = y
+        self.cost = cost
         self.head = None
 
     def addHead(self, pt):
         assert isinstance(pt, Point)
         self.head = pt
-
-# A data structure for queue used in BFS
-class queueNode:
-    def __init__(self, pt: Point, dist: int):
-        self.head = None
-        self.pt = pt  # The coordinates of the cell
-        self.dist = dist  # Cell's distance from the source
 
 
 # Draw path function
@@ -97,35 +91,30 @@ def bfs(map, start: Point, end: Point):
     q = deque()
 
     # Distance of source cell is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue source cell
+    q.append(start)  # Enqueue source cell
 
     while q:
 
         curr = q.popleft()  # Dequeue the front cell
 
-        # If we have reached the destination cell,
-        # we are done
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
-            drawPath(pt)
-            return curr.dist
+        if curr.x == end.x and curr.y == end.y:
+            drawPath(curr)
+            return 1
 
         # Otherwise enqueue its adjacent cells
         for i in range(4):
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
+            row = curr.x + rowNum[i]
+            col = curr.y + colNum[i]
 
             # if adjacent cell is valid, has path
             # and not visited yet, enqueue it.
             if (isValid(row, col, visited) and
-                    map[row][col] == '1' ):
+                    map[row][col] != 'X' ):
                 visited[row][col] = True
-                childPoint = Point(row, col)
-                childPoint.addHead(pt)
-                Adjcell = queueNode(childPoint,
-                                    curr.dist + 1)
-                q.append(Adjcell)
+                childPoint = Point(row, col, 1)
+                childPoint.addHead(curr)
+
+                q.append(childPoint)
 
         # Return -1 if destination cannot be reached
 
@@ -134,12 +123,14 @@ def bfs(map, start: Point, end: Point):
 # Driver code
 def main():
 
-    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1)
-    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1)
+    # NEED to updated dynamic cases
+    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1,1)
+    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1, 1)
 
     dist = bfs(map, start, end)
     if dist != -1:
         printMap(map)
     else:
         print("null")
+
 main()

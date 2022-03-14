@@ -3,7 +3,7 @@ from sys import argv
 import numpy as np
 
 #######################################################
-#                    WITHOUT DISTANCE                 #
+#                    WITH DISTANCE                    #
 #######################################################
 # Get arguments
 ## File name
@@ -47,9 +47,10 @@ def isValid( row, col, visited):
     return True
 
 class Point:
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, cost):
         self.x = x
         self.y = y
+        self.cost = cost
         self.head = None
 
     def addHead(self, pt):
@@ -122,9 +123,9 @@ def bfs(map, start: Point, end: Point):
             # if adjacent cell is valid, has path
             # and not visited yet, enqueue it.
             if (isValid(row, col, visited) and
-                    map[row][col] == '1' ):
+                    map[row][col] != 'X' ):
                 visited[row][col] = True
-                childPoint = Point(row, col)
+                childPoint = Point(row, col, 1)
                 childPoint.addHead(pt)
                 Adjcell = queueNode(childPoint,
                                     curr.dist + 1)
@@ -137,8 +138,8 @@ def bfs(map, start: Point, end: Point):
 # Driver code
 def main():
 
-    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1)
-    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1)
+    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1,1)
+    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1,1)
 
     dist = bfs(map, start, end)
     if dist != -1:
@@ -148,7 +149,7 @@ def main():
 main()
 
 #######################################################
-#                    WITh DISTANCE                    #
+#                    WITHOUT DISTANCE                 #
 #######################################################
 # Get arguments
 ## File name
@@ -192,10 +193,10 @@ def isValid( row, col, visited):
     return True
 
 class Point:
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, cost: int):
         self.x = x
         self.y = y
-
+        self.cost = cost
         self.head = None
 
     def addHead(self, pt):
@@ -226,8 +227,8 @@ def printMap(map):
 
 # These arrays are used to get row and column
 # numbers of 4 neighbours of a given cell
-rowNum = [1, 0, 0, 1]
-colNum = [0, 1, 1, 0]
+rowNum = [-1, 0, 0, 1]
+colNum = [0, -1, 1, 0]
 
 def bfs(map, start: Point, end: Point):
     # Declare the visited array
@@ -257,9 +258,9 @@ def bfs(map, start: Point, end: Point):
             # if adjacent cell is valid, has path
             # and not visited yet, enqueue it.
             if (isValid(row, col, visited) and
-                    map[row][col] == '1' ):
+                    map[row][col] != 'X' ):
                 visited[row][col] = True
-                childPoint = Point(row, col)
+                childPoint = Point(row, col, 1)
                 childPoint.addHead(curr)
 
                 q.append(childPoint)
@@ -271,8 +272,9 @@ def bfs(map, start: Point, end: Point):
 # Driver code
 def main():
 
-    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1)
-    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1)
+    # NEED to updated dynamic cases
+    start = Point(int(lines[1].split(" ")[0]) -1, int(lines[1].split(" ")[1]) -1,1)
+    end = Point(int(lines[2].split(" ")[0]) -1, int(lines[2].split(" ")[1]) -1, 1)
 
     dist = bfs(map, start, end)
     if dist != -1:
