@@ -9,9 +9,7 @@ mapFile = argv[1]
 ## Algorithm values: bfs, ucs, or astar
 algorithm = argv[2]
 ## Heuristic values: euclidean or manhattan
-heuristic = argv[3]
-
-#### Test cmd line: python pathfinder.py map.txt bfs euclidean
+heuristic = argv[3] if(len(argv) == 2) else " "
 
 # mapFile = open(map, "r")
 with open(mapFile) as infile_object:
@@ -30,8 +28,8 @@ for pointer in range(3, len(lines)):
         col += 1
 
 
-# Function to check if a cell
-# is be visited or not
+# Function to check if a next point
+# is be visited or not and valid
 def isValid( row, col, visited):
     # Check if cell is not on map
     if (row < 0 or col < 0 or row >= rowSize or col >= colSize):
@@ -39,6 +37,9 @@ def isValid( row, col, visited):
 
     # Check if cell is already visited
     if (visited[row][col]):
+        return False
+
+    if ( map[row][col] == 'X'):
         return False
 
     # Otherwise
@@ -87,12 +88,14 @@ def drawPath(pt: Point):
             break
         counter += 1
 
+
 # Print map function
 def printMap(map):
     for i in range (0, rowSize):
         for j in range (0, colSize):
             print(map[i][j], end = ' ')
         print("")
+
 
 #Calculate cost
 def calculateCost(curr: Point, next: Point):
@@ -101,46 +104,50 @@ def calculateCost(curr: Point, next: Point):
         return 1.0 + next.val - curr.val
 
     return 1.0
-# These arrays are used to get row and column
-# numbers of 4 neighbours of a given cell
-# rowNum = [-1, 0, 0, 1]
-# colNum = [0, -1, 1, 0]
+
+
+# These arrays are used to get next cells in 4 direction Up, Down, Left Right
 rowNum = [1, 0, 0,- 1]
 colNum = [0, 1, -1, 0]
+
+# Get start and end point corr by extracting text file
 startX = int(lines[1].split(" ")[0]) -1
 startY = int(lines[1].split(" ")[1]) -1
 endX = int(lines[2].split(" ")[0]) -1
 endY = int(lines[2].split(" ")[1]) -1
 
+
+# Breadth first search function
 def bfs(map, start: Point, end: Point):
+
     # Declare the visited array
     visited = [[False for i in range(colSize)] for i in range(rowSize)]
 
+    # Marked start point
     visited[start.x][start.y] = True
 
-    # Create a queue for BFS
+    # Create a queue
     q = deque()
 
-    # Distance of source cell is 0
-    q.append(start)  # Enqueue source cell
+    # Distance of start point(or cell) is 0
+    q.append(start)  # Enqueue start point( or cell)
 
     while q:
 
-        curr = q.popleft()  # Dequeue the front cell
+        curr = q.popleft()  # Dequeue the front point
 
         if curr.x == end.x and curr.y == end.y:
             drawPath(curr)
             return 1
 
-        # Otherwise enqueue its adjacent cells
+        # Otherwise enqueue its neighbour points
         for i in range(4):
             row = curr.x + rowNum[i]
             col = curr.y + colNum[i]
 
-            # if adjacent cell is valid, has path
+            # if neighbour point is valid, has path
             # and not visited yet, enqueue it.
-            if (isValid(row, col, visited) and
-                    map[row][col] != 'X' ):
+            if (isValid(row, col, visited)):
                 visited[row][col] = True
                 childPoint = Point(row, col, 1)
                 childPoint.addHead(curr)
@@ -152,75 +159,81 @@ def bfs(map, start: Point, end: Point):
     return -1
 
 
+# Uniform cost search function
 def ucs(map, start: Point, end: Point):
     # Declare the visited array
     visited = [[False for i in range(colSize)] for i in range(rowSize)]
 
+    # Marked start point
     visited[start.x][start.y] = True
 
-    # Create a queue for BFS
+    # Create a queue
     q = deque()
 
-    # Distance of source cell is 0
+    # Distance of start point is 0
     s = queueNode(start, 0)
-    q.append(s)  # Enqueue source cell
+    q.append(s)  # Enqueue start point
 
     while q:
         curr = q.popleft()
 
+        # Get next point that have lowest accumulate cost distance
         while len(q) != 0:
-            test = q.popleft()  # Dequeue the front cell
+            test = q.popleft()  # Dequeue the front  point
             if(test.dist < curr.dist):
                 visited[curr.pt.x][curr.pt.y] = True
                 curr = test
             else:
                 visited[test.pt.x][test.pt.y] = True
 
-        # If we have reached the destination cell,
-        # we are done
+        # If end point reached,
+        # then draw path and end searching
         pt = curr.pt
         if pt.x == end.x and pt.y == end.y:
             drawPath(pt)
             return curr.dist
 
-        # Otherwise enqueue its adjacent cells
+        # Otherwise enqueue its neighbour points
         for i in range(4):
             row = pt.x + rowNum[i]
             col = pt.y + colNum[i]
 
-            # if adjacent cell is valid, has path
+            # if neighbour point is valid, has path
             # and not visited yet, enqueue it.
-            if (isValid(row, col, visited) and
-                    map[row][col] != 'X'):
+            if (isValid(row, col, visited)):
                 visited[row][col] = True
-                childPoint = Point(row, col, int(map[row][col]))
+                childPoint = Point(row, col, float(map[row][col]))
                 childPoint.addHead(pt)
                 Adjcell = queueNode(childPoint,
                                     curr.dist + calculateCost(curr.pt, childPoint))
                 q.append(Adjcell)
 
-        # Return -1 if destination cannot be reached
-    return -1
+        # Return -1 if the end point cannot be reached
+    return -1.0
 
 
+# A* search function
 def aStart(map, start: Point, end: Point):
 
     # Declare the visited array
     visited = [[False for i in range(colSize)] for i in range(rowSize)]
 
+    # Marked start point
     visited[start.x][start.y] = True
 
-    # Create a queue for BFS
+    # Create a queue
     q = deque()
 
-    # Distance of source cell is 0
+    # Distance of start point is 0
     s = queueNode(start, 0)
-    q.append(s)  # Enqueue source cell
+    q.append(s)  # Enqueue source start point
 
     while q:
         curr = q.popleft()
+
+        # Get next point that have lowest accumulate cost distance
         while len(q) != 0:
-            test = q.popleft()  # Dequeue the front cell
+            test = q.popleft()  # Dequeue the front point
 
             if (test.dist < curr.dist):
                 visited[curr.pt.x][curr.pt.y] = True
@@ -228,50 +241,57 @@ def aStart(map, start: Point, end: Point):
             else:
                 visited[test.pt.x][test.pt.y] = True
 
-
-        # If we have reached the destination cell,
-        # we are done
+        # If end point reached,
+        # then draw path and end searching
         pt = curr.pt
         if pt.x == end.x and pt.y == end.y:
 
             drawPath(pt)
             return curr.dist
 
-        # Otherwise enqueue its adjacent cells
+        # Otherwise enqueue its neighbour points
         for i in range(4):
 
             row = pt.x + rowNum[i]
             col = pt.y + colNum[i]
 
-            # if adjacent cell is valid, has path
+            # if neighbour point is valid, has path
             # and not visited yet, enqueue it.
-            if (isValid(row, col, visited) and
-                    map[row][col] != 'X'):
+            if (isValid(row, col, visited)):
                 visited[row][col] = True
                 childPoint = Point(row, col, float(map[row][col]))
                 childPoint.addHead(pt)
                 childPoint.addHeuristic(end, heuristic)
-                # + childPoint.heuristic
+                childPoint.heuristic
                 Adjcell = queueNode(childPoint,
                                     curr.dist + calculateCost(curr.pt, childPoint) + childPoint.heuristic )
                 q.append(Adjcell)
 
-        # Return -1 if destination cannot be reached
+        # Return -1 if end point cannot be reached
     return -1.0
 
 
 # Driver code
 def main():
 
-    # NEED to updated dynamic cases
+    # Init some variable
     start = Point(startX, startY, float(map[startX][startY]))
     end = Point(endX, endY, float(map[endX][endY]))
+    fValue = -1.0
 
-    # add hueristic for start point
-    start.addHeuristic(end, heuristic)
 
-    dist = aStart(map, start, end)
-    if dist != -1.0:
+    if(algorithm.lower() == 'bfs'):
+        fValue = bfs(map, start, end)
+    elif(algorithm.lower() == 'ucs'):
+        fValue = ucs(map, start, end)
+    elif (algorithm.lower() == "astar"):
+        # add hueristic for start point
+        print("in")
+        start.addHeuristic(end, heuristic)
+        fValue = aStart(map, start, end)
+
+
+    if fValue != -1.0:
         printMap(map)
     else:
         print("null")

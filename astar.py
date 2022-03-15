@@ -116,59 +116,6 @@ startY = int(lines[1].split(" ")[1]) -1
 endX = int(lines[2].split(" ")[0]) -1
 endY = int(lines[2].split(" ")[1]) -1
 
-# Uniform cost search function
-def ucs(map, start: Point, end: Point):
-    # Declare the visited array
-    visited = [[False for i in range(colSize)] for i in range(rowSize)]
-
-    # Marked start point
-    visited[start.x][start.y] = True
-
-    # Create a queue
-    q = deque()
-
-    # Distance of start point is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue start point
-
-    while q:
-        curr = q.popleft()
-
-        # Get next point that have lowest accumulate cost distance
-        while len(q) != 0:
-            test = q.popleft()  # Dequeue the front  point
-            if(test.dist < curr.dist):
-                visited[curr.pt.x][curr.pt.y] = True
-                curr = test
-            else:
-                visited[test.pt.x][test.pt.y] = True
-
-        # If end point reached,
-        # then draw path and end searching
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
-            drawPath(pt)
-            return curr.dist
-
-        # Otherwise enqueue its neighbour points
-        for i in range(4):
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
-
-            # if neighbour point is valid, has path
-            # and not visited yet, enqueue it.
-            if (isValid(row, col, visited)):
-                visited[row][col] = True
-                childPoint = Point(row, col, float(map[row][col]))
-                childPoint.addHead(pt)
-                Adjcell = queueNode(childPoint,
-                                    curr.dist + calculateCost(curr.pt, childPoint))
-                q.append(Adjcell)
-
-        # Return -1 if the end point cannot be reached
-    return -1.0
-
-
 
 # Driver code
 def main():
