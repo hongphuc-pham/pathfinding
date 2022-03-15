@@ -1,7 +1,5 @@
-
 def ucs(map, start: Point, end: Point):
-
-# Declare the visited array
+    # Declare the visited array
     visited = [[False for i in range(colSize)] for i in range(rowSize)]
 
     visited[start.x][start.y] = True
@@ -19,10 +17,7 @@ def ucs(map, start: Point, end: Point):
         while len(q) != 0:
             test = q.popleft()  # Dequeue the front cell
             if(test.dist < curr.dist):
-                visited[curr.pt.x][curr.pt.y] = True
                 curr = test
-            else:
-                visited[test.pt.x][test.pt.y] = True
 
         # If we have reached the destination cell,
         # we are done
@@ -41,10 +36,10 @@ def ucs(map, start: Point, end: Point):
             if (isValid(row, col, visited) and
                     map[row][col] != 'X'):
                 visited[row][col] = True
-                childPoint = Point(row, col, int(map[row][col]))
+                childPoint = Point(row, col, 1)
                 childPoint.addHead(pt)
                 Adjcell = queueNode(childPoint,
-                                    curr.dist + calculateCost(curr.pt, childPoint))
+                                    curr.dist + int(map[row][col]))
                 q.append(Adjcell)
 
         # Return -1 if destination cannot be reached
