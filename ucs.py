@@ -9,7 +9,8 @@ mapFile = argv[1]
 ## Algorithm values: bfs, ucs, or astar
 algorithm = argv[2]
 ## Heuristic values: euclidean or manhattan
-heuristic = argv[3] if(len(argv) == 2) else " "
+heuristic = argv[3] if(len(argv) == 4) else " "
+
 
 # mapFile = open(map, "r")
 with open(mapFile) as infile_object:
@@ -39,7 +40,7 @@ def isValid( row, col, visited):
     if (visited[row][col]):
         return False
 
-    if ( map[row][col] == 'X'):
+    if ( map[row][col].lower() == 'x'):
         return False
 
     # Otherwise
@@ -58,12 +59,11 @@ class Point:
         assert isinstance(pt, Point)
         self.head = pt
 
-    def addHeuristic(self, target, type):
+    def addHeuristic(self, target, hType: str):
         assert isinstance(target, Point)
-
-        if type.lower() == 'euclidean':
+        if hType.lower() == 'euclidean':
             self.heuristic = mt.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
-        elif type.lower() == 'manhattan':
+        elif hType.lower() == 'manhattan':
             self.heuristic = abs(self.x - target.x) + abs(self.y - target.y)
 
 
@@ -93,8 +93,11 @@ def drawPath(pt: Point):
 def printMap(map):
     for i in range (0, rowSize):
         for j in range (0, colSize):
-            print(map[i][j], end = ' ')
-        print("")
+            if(j == colSize -1):
+                print(map[i][j])
+            else:
+                print(map[i][j], end = ' ')
+
 
 
 #Calculate cost
@@ -115,6 +118,7 @@ startX = int(lines[1].split(" ")[0]) -1
 startY = int(lines[1].split(" ")[1]) -1
 endX = int(lines[2].split(" ")[0]) -1
 endY = int(lines[2].split(" ")[1]) -1
+
 
 # Uniform cost search function
 def ucs(map, start: Point, end: Point):
@@ -161,38 +165,12 @@ def ucs(map, start: Point, end: Point):
                 visited[row][col] = True
                 childPoint = Point(row, col, float(map[row][col]))
                 childPoint.addHead(pt)
-                Adjcell = queueNode(childPoint,
+                nextPoint = queueNode(childPoint,
                                     curr.dist + calculateCost(curr.pt, childPoint))
-                q.append(Adjcell)
+                q.append(nextPoint)
 
         # Return -1 if the end point cannot be reached
     return -1.0
 
 
 
-# Driver code
-def main():
-
-    # Init some variable
-    start = Point(startX, startY, float(map[startX][startY]))
-    end = Point(endX, endY, float(map[endX][endY]))
-    fValue = -1.0
-
-
-    if(algorithm.lower() == 'bfs'):
-        fValue = bfs(map, start, end)
-    elif(algorithm.lower() == 'ucs'):
-        fValue = ucs(map, start, end)
-    elif (algorithm.lower() == "astar"):
-        # add hueristic for start point
-        print("in")
-        start.addHeuristic(end, heuristic)
-        fValue = aStart(map, start, end)
-
-
-    if fValue != -1.0:
-        printMap(map)
-    else:
-        print("null")
-
-main()
