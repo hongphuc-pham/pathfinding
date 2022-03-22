@@ -1,300 +1,270 @@
-from collections import deque
-from sys import argv
+# Import libraries
+import sys
+import random
+import copy
 import numpy as np
-import math as mt
-
-# Get arguments
-## File name
-mapFile = argv[1]
-## Algorithm values: bfs, ucs, or astar
-algorithm = argv[2]
-## Heuristic values: euclidean or manhattan
-heuristic = argv[3] if(len(argv) == 4) else " "
 
 
-# mapFile = open(map, "r")
-with open(mapFile) as infile_object:
-    lines = infile_object.read().splitlines()
+# This class represent a state
+class State:
+    # Create a new state
+    def __init__(self, route: [], distance: int = 0):
+        self.route = route
+        self.distance = distance
 
-# Generate 2D array map
-rowSize = int(lines[0].split(" ")[0])
-colSize = int(lines[0].split(" ")[1])
-map = np.empty((rowSize, colSize), str)
+    # Compare states
+    def __eq__(self, other):
+        for i in range(len(self.route)):
+            if (self.route[i] != other.route[i]):
+                return False
+        return True
 
-# Create a 2D map array
-for pointer in range(3, len(lines)):
-    col = 0
-    for char in lines[pointer].split(" "):
-        map[pointer-3][col] = char
-        col += 1
+    # Sort states
+    def __lt__(self, other):
+        return self.distance < other.distance
 
+    # Print a state
+    def __repr__(self):
+        return ('({0},{1})\n'.format(self.route, self.distance))
 
-# Function to check if a next point
-# is be visited or not and valid
-def isValid( row, col, visited):
-    # Check if cell is not on map
-    if (row < 0 or col < 0 or row >= rowSize or col >= colSize):
-        return False
+    # Create a shallow copy
+    def copy(self):
+        return State(self.route, self.distance)
 
-    # Check if cell is already visited
-    if (visited[row][col]):
-        return False
+    # Create a deep copy
+    def deepcopy(self):
+        return State(copy.deepcopy(self.route), copy.deepcopy(self.distance))
 
-    if ( map[row][col].lower() == 'x'):
-        return False
+    # Update distance
+    def update_distance(self, matrix, home):
 
-    # Otherwise
-    return True
-
-
-class Point:
-    def __init__(self, x: float, y: float, val: float):
-        self.x = x
-        self.y = y
-        self.val = val
-        self.heuristic = 0.0
-        self.head = None
-
-    def addHead(self, pt):
-        assert isinstance(pt, Point)
-        self.head = pt
-
-    def addHeuristic(self, target, hType: str):
-        assert isinstance(target, Point)
-        if hType.lower() == 'euclidean':
-            self.heuristic = mt.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
-        elif hType.lower() == 'manhattan':
-            self.heuristic = abs(self.x - target.x) + abs(self.y - target.y)
+        # Reset distance
+        self.distance = 0
+        # Keep track of departing city
+        from_index = home
+        # Loop all cities in the current route
+        for i in range(len(self.route)):
+            self.distance += matrix[from_index][self.route[i]]
+            from_index = self.route[i]
+        # Add the distance back to home
+        self.distance += matrix[from_index][home]
 
 
-class queueNode:
-    def __init__(self, pt: Point, dist: float):
-        self.head = None
-        self.pt = pt  # The coordinates of the cell
-        self.dist = dist
+# This class represent a city (used when we need to delete cities)
+class City:
+    # Create a new city
+    def __init__(self, index: int, distance: int):
+        self.index = index
+        self.distance = distance
+
+    # Sort cities
+    def __lt__(self, other):
+        return self.distance < other.distance
 
 
-# Draw path function
-def drawPath(pt: Point):
-    path = deque()
-    path.append(pt)
-    counter = 0
-    while path:
-        pointer = path.popleft()
-        map[pointer.x][pointer.y] = '*'
-        if (pointer.head != None):
-            path.append(pointer.head)
+# Return true with probability p
+def probability(p):
+    return p > random.uniform(0.0, 1.0)
+
+
+# Schedule function for simulated annealing
+def exp_schedule(k=20, lam=0.005, limit=1000):
+    return lambda t: (k * np.exp(-lam * t) if t < limit else 0)
+
+
+# Get the best random solution from a population
+def get_random_solution(matrix: [], home: int, city_indexes: [], size: int, use_weights: bool = False):
+    # Create a list with city indexes
+    cities = city_indexes.copy()
+    # Remove the home city
+    cities.pop(home)
+    # Create a population
+    population = []
+    for i in range(size):
+        if (use_weights == True):
+            state = get_random_solution_with_weights(matrix, home)
         else:
-            break
-        counter += 1
+            # Shuffle cities at random
+            random.shuffle(cities)
+            # Create a state
+            state = State(cities[:])
+            state.update_distance(matrix, home)
+        # Add an individual to the population
+        population.append(state)
+    # Sort population
+    population.sort()
+    # Return the best solution
+    return population[0]
 
 
-# Print map function
-def printMap(map):
-    for i in range (0, rowSize):
-        for j in range (0, colSize):
-            if(j == colSize -1):
-                print(map[i][j])
-            else:
-                print(map[i][j], end = ' ')
+# Get best solution by distance
+def get_best_solution_by_distance(matrix: [], home: int):
+    # Variables
+    route = []
+    from_index = home
+    length = len(matrix) - 1
+    # Loop until route is complete
+    while len(route) < length:
+        # Get a matrix row
+        row = matrix[from_index]
+        # Create a list with cities
+        cities = {}
+        for i in range(len(row)):
+            cities[i] = City(i, row[i])
+        # Remove cities that already is assigned to the route
+        del cities[home]
+        for i in route:
+            del cities[i]
+        # Sort cities
+        sorted = list(cities.values())
+        sorted.sort()
+        # Add the city with the shortest distance
+        from_index = sorted[0].index
+        route.append(from_index)
+    # Create a new state and update the distance
+    state = State(route)
+    state.update_distance(matrix, home)
+    # Return a state
+    return state
 
 
-
-#Calculate cost
-def calculateCost(curr: Point, next: Point):
-
-    if(curr.val < next.val):
-        return 1.0 + next.val - curr.val
-
-    return 1.0
-
-
-# These arrays are used to get next cells in 4 direction Up, Down, Left Right
-rowNum = [1, 0, 0,- 1]
-colNum = [0, 1, -1, 0]
-
-# Get start and end point corr by extracting text file
-startX = int(lines[1].split(" ")[0]) -1
-startY = int(lines[1].split(" ")[1]) -1
-endX = int(lines[2].split(" ")[0]) -1
-endY = int(lines[2].split(" ")[1]) -1
-
-
-# Breadth first search function
-def bfs(map, start: Point, end: Point):
-
-    # Declare the visited array
-    visited = [[False for i in range(colSize)] for i in range(rowSize)]
-
-    # Marked start point
-    visited[start.x][start.y] = True
-
-    # Create a queue
-    q = deque()
-
-    # Distance of start point(or cell) is 0
-    q.append(start)  # Enqueue start point( or cell)
-
-    while q:
-
-        curr = q.popleft()  # Dequeue the front point
-
-        if curr.x == end.x and curr.y == end.y:
-            drawPath(curr)
-            return 1
-
-        # Otherwise enqueue its neighbour points
-        for i in range(4):
-            row = curr.x + rowNum[i]
-            col = curr.y + colNum[i]
-
-            # if neighbour point is valid, has path
-            # and not visited yet, enqueue it.
-            if (isValid(row, col, visited)):
-                visited[row][col] = True
-                childPoint = Point(row, col, 1)
-                childPoint.addHead(curr)
-
-                q.append(childPoint)
-
-        # Return -1 if destination cannot be reached
-
-    return -1
+# Get a random solution by using weights
+def get_random_solution_with_weights(matrix: [], home: int):
+    # Variables
+    route = []
+    from_index = home
+    length = len(matrix) - 1
+    # Loop until route is complete
+    while len(route) < length:
+        # Get a matrix row
+        row = matrix[from_index]
+        # Create a list with cities
+        cities = {}
+        for i in range(len(row)):
+            cities[i] = City(i, row[i])
+        # Remove cities that already is assigned to the route
+        del cities[home]
+        for i in route:
+            del cities[i]
+        # Get the total weight
+        total_weight = 0
+        for key, city in cities.items():
+            total_weight += city.distance
+        # Add weights
+        weights = []
+        for key, city in cities.items():
+            weights.append(total_weight / city.distance)
+        # Add a city at random
+        from_index = random.choices(list(cities.keys()), weights=weights)[0]
+        route.append(from_index)
+    # Create a new state and update the distance
+    state = State(route)
+    state.update_distance(matrix, home)
+    # Return a state
+    return state
 
 
-# Uniform cost search function
-def ucs(map, start: Point, end: Point):
-    # Declare the visited array
-    visited = [[False for i in range(colSize)] for i in range(rowSize)]
-
-    # Marked start point
-    visited[start.x][start.y] = True
-
-    # Create a queue
-    q = deque()
-
-    # Distance of start point is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue start point
-
-    while q:
-        curr = q.popleft()
-
-        # Get next point that have lowest accumulate cost distance
-        while len(q) != 0:
-            test = q.popleft()  # Dequeue the front  point
-            if(test.dist < curr.dist):
-                visited[curr.pt.x][curr.pt.y] = True
-                curr = test
-            else:
-                visited[test.pt.x][test.pt.y] = True
-
-        # If end point reached,
-        # then draw path and end searching
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
-            drawPath(pt)
-            return curr.dist
-
-        # Otherwise enqueue its neighbour points
-        for i in range(4):
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
-
-            # if neighbour point is valid, has path
-            # and not visited yet, enqueue it.
-            if (isValid(row, col, visited)):
-                visited[row][col] = True
-                childPoint = Point(row, col, float(map[row][col]))
-                childPoint.addHead(pt)
-                nextPoint = queueNode(childPoint,
-                                    curr.dist + calculateCost(curr.pt, childPoint))
-                q.append(nextPoint)
-
-        # Return -1 if the end point cannot be reached
-    return -1.0
+# Mutate a solution
+def mutate(matrix: [], home: int, state: State, mutation_rate: float = 0.01):
+    # Create a copy of the state
+    mutated_state = state.deepcopy()
+    # Loop all the states in a route
+    for i in range(len(mutated_state.route)):
+        # Check if we should do a mutation
+        if (random.random() < mutation_rate):
+            # Swap two cities
+            j = int(random.random() * len(state.route))
+            city_1 = mutated_state.route[i]
+            city_2 = mutated_state.route[j]
+            mutated_state.route[i] = city_2
+            mutated_state.route[j] = city_1
+    # Update the distance
+    mutated_state.update_distance(matrix, home)
+    # Return a mutated state
+    return mutated_state
 
 
-# A* search function
-def aStart(map, start: Point, end: Point):
-
-    # Declare the visited array
-    visited = [[False for i in range(colSize)] for i in range(rowSize)]
-
-    # Marked start point
-    visited[start.x][start.y] = True
-
-    # Create a queue
-    q = deque()
-
-    # Distance of start point is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue source start point
-
-    while q:
-        curr = q.popleft()
-
-        # Get next point that have lowest accumulate cost distance
-        while len(q) != 0:
-            test = q.popleft()  # Dequeue the front point
-
-            if (test.dist < curr.dist):
-                visited[curr.pt.x][curr.pt.y] = True
-                curr = test
-            else:
-                visited[test.pt.x][test.pt.y] = True
-
-        # If end point reached,
-        # then draw path and end searching
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
-
-            drawPath(pt)
-            return curr.dist
-
-        # Otherwise enqueue its neighbour points
-        for i in range(4):
-
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
-
-            # if neighbour point is valid, has path
-            # and not visited yet, enqueue it.
-            if (isValid(row, col, visited)):
-                visited[row][col] = True
-                childPoint = Point(row, col, float(map[row][col]))
-                childPoint.addHead(pt)
-
-                childPoint.addHeuristic(end, heuristic)
-
-                nextPoint = queueNode(childPoint, curr.dist + calculateCost(curr.pt, childPoint) + childPoint.heuristic)
-                q.append(nextPoint)
-
-        # Return -1 if end point cannot be reached
-    return -1.0
+# Simulated annealing
+def simulated_annealing(matrix: [], home: int, initial_state: State, mutation_rate: float = 0.01,
+                        schedule=exp_schedule()):
+    # Keep track of the best state
+    best_state = initial_state
+    # Loop a large number of times (int.max)
+    for t in range(sys.maxsize):
+        # Get a temperature
+        T = schedule(t)
+        # Return if temperature is 0
+        if T == 0:
+            return best_state
+        # Mutate the best state
+        neighbor = mutate(matrix, home, best_state, mutation_rate)
+        # Calculate the change in e
+        delta_e = best_state.distance - neighbor.distance
+        # Check if we should update the best state
+        if delta_e > 0 or probability(np.exp(delta_e / T)):
+            best_state = neighbor
 
 
-# Driver code
+# The main entry point for this module
 def main():
+    # Cities to travel
+    cities = ['New York', 'Los Angeles', 'Chicago', 'Minneapolis', 'Denver', 'Dallas', 'Seattle', 'Boston',
+              'San Francisco', 'St. Louis', 'Houston', 'Phoenix', 'Salt Lake City']
+    city_indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    # Index of start location
+    home = 2  # Chicago
+    # Distances in miles between cities, same indexes (i, j) as in the cities array
+    matrix = [[0, 2451, 713, 1018, 1631, 1374, 2408, 213, 2571, 875, 1420, 2145, 1972],
+              [2451, 0, 1745, 1524, 831, 1240, 959, 2596, 403, 1589, 1374, 357, 579],
+              [713, 1745, 0, 355, 920, 803, 1737, 851, 1858, 262, 940, 1453, 1260],
+              [1018, 1524, 355, 0, 700, 862, 1395, 1123, 1584, 466, 1056, 1280, 987],
+              [1631, 831, 920, 700, 0, 663, 1021, 1769, 949, 796, 879, 586, 371],
+              [1374, 1240, 803, 862, 663, 0, 1681, 1551, 1765, 547, 225, 887, 999],
+              [2408, 959, 1737, 1395, 1021, 1681, 0, 2493, 678, 1724, 1891, 1114, 701],
+              [213, 2596, 851, 1123, 1769, 1551, 2493, 0, 2699, 1038, 1605, 2300, 2099],
+              [2571, 403, 1858, 1584, 949, 1765, 678, 2699, 0, 1744, 1645, 653, 600],
+              [875, 1589, 262, 466, 796, 547, 1724, 1038, 1744, 0, 679, 1272, 1162],
+              [1420, 1374, 940, 1056, 879, 225, 1891, 1605, 1645, 679, 0, 1017, 1200],
+              [2145, 357, 1453, 1280, 586, 887, 1114, 2300, 653, 1272, 1017, 0, 504],
+              [1972, 579, 1260, 987, 371, 999, 701, 2099, 600, 1162, 1200, 504, 0]]
+    # Get the best route by distance
+    state = get_best_solution_by_distance(matrix, home)
+    print('-- Best solution by distance --')
+    print(cities[home], end='')
+    for i in range(0, len(state.route)):
+        print(' -> ' + cities[state.route[i]], end='')
+    print(' -> ' + cities[home], end='')
+    print('\n\nTotal distance: {0} miles'.format(state.distance))
+    print()
+    # Get the best random route
+    state = get_random_solution(matrix, home, city_indexes, 100)
+    print('-- Best random solution --')
+    print(cities[home], end='')
+    for i in range(0, len(state.route)):
+        print(' -> ' + cities[state.route[i]], end='')
+    print(' -> ' + cities[home], end='')
+    print('\n\nTotal distance: {0} miles'.format(state.distance))
+    print()
+    # Get a random solution with weights
+    state = get_random_solution(matrix, home, city_indexes, 100, use_weights=True)
+    print('-- Best random solution with weights --')
+    print(cities[home], end='')
+    for i in range(0, len(state.route)):
+        print(' -> ' + cities[state.route[i]], end='')
+    print(' -> ' + cities[home], end='')
+    print('\n\nTotal distance: {0} miles'.format(state.distance))
+    print()
+    # Run simulated annealing to find a better solution
+    state = get_best_solution_by_distance(matrix, home)
+    state = simulated_annealing(matrix, home, state, 0.1)
+    print('-- Simulated annealing solution --')
+    print(cities[home], end='')
+    for i in range(0, len(state.route)):
+        print(' -> ' + cities[state.route[i]], end='')
+    print(' -> ' + cities[home], end='')
+    print('\n\nTotal distance: {0} miles'.format(state.distance))
+    print()
 
-    # Init some variable
-    start = Point(startX, startY, float(map[startX][startY]))
-    end = Point(endX, endY, float(map[endX][endY]))
-    fValue = -1.0
 
-    if(algorithm.lower() == 'bfs'):
-        fValue = bfs(map, start, end)
-    elif(algorithm.lower() == 'ucs'):
-        fValue = ucs(map, start, end)
-    elif (algorithm.lower() == "astar"):
-        # add hueristic for start point
-        start.addHeuristic(end, heuristic)
-        fValue = aStart(map, start, end)
-
-
-    if fValue != -1.0:
-        printMap(map)
-    else:
-        print("null")
-
-main()
+# Tell python to run main method
+if __name__ == "__main__": main()

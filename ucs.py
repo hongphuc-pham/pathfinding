@@ -110,8 +110,11 @@ def calculateCost(curr: Point, next: Point):
 
 
 # These arrays are used to get next cells in 4 direction Up, Down, Left Right
-rowNum = [1, 0, 0,- 1]
-colNum = [0, 1, -1, 0]
+rowNum = [1, 0, -1, 0]
+colNum = [0, 1, 0, -1]
+
+# rowNum = [-1, 1, 0, 0]
+# colNum = [0, 0, 1, -1]
 
 # Get start and end point corr by extracting text file
 startX = int(lines[1].split(" ")[0]) -1
@@ -173,4 +176,28 @@ def ucs(map, start: Point, end: Point):
     return -1.0
 
 
+# Driver code
+def main():
+
+    # Init some variable
+    start = Point(startX, startY, float(map[startX][startY]))
+    end = Point(endX, endY, float(map[endX][endY]))
+    fValue = -1.0
+
+    if(algorithm.lower() == 'bfs'):
+        fValue = bfs(map, start, end)
+    elif(algorithm.lower() == 'ucs'):
+        fValue = ucs(map, start, end)
+    elif (algorithm.lower() == "astar"):
+        # add hueristic for start point
+        start.addHeuristic(end, heuristic)
+        fValue = aStart(map, start, end)
+
+
+    if fValue != -1.0:
+        printMap(map)
+    else:
+        print("null")
+
+main()
 

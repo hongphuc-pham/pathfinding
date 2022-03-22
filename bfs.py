@@ -110,8 +110,8 @@ def calculateCost(curr: Point, next: Point):
 
 
 # These arrays are used to get next cells in 4 direction Up, Down, Left Right
-rowNum = [1, 0, 0,- 1]
-colNum = [0, 1, -1, 0]
+rowNum = [1, 0, -1, 0]
+colNum = [0, 1, 0, -1]
 
 # Get start and end point corr by extracting text file
 startX = int(lines[1].split(" ")[0]) -1

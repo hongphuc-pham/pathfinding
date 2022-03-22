@@ -48,12 +48,24 @@ def isValid( row, col, visited):
 
 
 class Point:
+    heuristic = 0.0
+    g = 0.0
+    head = None
+    fValue = 0.0
     def __init__(self, x: float, y: float, val: float):
         self.x = x
         self.y = y
         self.val = val
-        self.heuristic = 0.0
-        self.head = None
+
+
+    def __lt__(self, other):
+        return self.fValue < other.fValue
+
+    def __eq__(self, other):
+        if (isinstance(other, Point)):
+            return (self.x, self.y) == (other.x, other.y)
+        return False
+
 
     def addHead(self, pt):
         assert isinstance(pt, Point)
@@ -66,12 +78,15 @@ class Point:
         elif hType.lower() == 'manhattan':
             self.heuristic = abs(self.x - target.x) + abs(self.y - target.y)
 
+    def addG(self, g: float):
+        self.g = g
 
-class queueNode:
-    def __init__(self, pt: Point, dist: float):
-        self.head = None
-        self.pt = pt  # The coordinates of the cell
-        self.dist = dist
+    def updatePoint(self, parent, gcost):
+        self.head = parent
+        self.g = gcost
+
+    def updateFValue(self, fVal: float):
+        self.fValue = fVal
 
 
 # Draw path function
@@ -82,7 +97,7 @@ def drawPath(pt: Point):
     while path:
         pointer = path.popleft()
         map[pointer.x][pointer.y] = '*'
-        if (pointer.head != None):
+        if (pointer.head != None ):
             path.append(pointer.head)
         else:
             break
@@ -108,10 +123,9 @@ def calculateCost(curr: Point, next: Point):
 
     return 1.0
 
-
 # These arrays are used to get next cells in 4 direction Up, Down, Left Right
-rowNum = [1, 0, -1, 0]
-colNum = [0, 1, 0, -1]
+rowNum = [-1, 1, 0, 0]
+colNum = [0, 0, -1, 1]
 
 # Get start and end point corr by extracting text file
 startX = int(lines[1].split(" ")[0]) -1
@@ -125,55 +139,54 @@ def aStart(map, start: Point, end: Point):
 
     # Declare the visited array
     visited = [[False for i in range(colSize)] for i in range(rowSize)]
-
-    # Marked start point
-    visited[start.x][start.y] = True
-
     # Create a queue
-    q = deque()
-
+    q = []
     # Distance of start point is 0
-    s = queueNode(start, 0)
-    q.append(s)  # Enqueue source start point
+    q.append(start)  # Enqueue source start point
+
 
     while q:
-        curr = q.popleft()
-
-        # Get next point that have lowest accumulate cost distance
-        while len(q) != 0:
-            test = q.popleft()  # Dequeue the front point
-
-            if (test.dist < curr.dist):
-                visited[curr.pt.x][curr.pt.y] = True
-                curr = test
-            else:
-                visited[test.pt.x][test.pt.y] = True
+        q.sort()
+        curr = q.pop(0)
 
         # If end point reached,
         # then draw path and end searching
-        pt = curr.pt
-        if pt.x == end.x and pt.y == end.y:
 
-            drawPath(pt)
-            return curr.dist
+        if curr.x == end.x and curr.y == end.y:
+            drawPath(curr)
+            return curr.fValue
 
-        # Otherwise enqueue its neighbour points
-        for i in range(4):
+        else:
 
-            row = pt.x + rowNum[i]
-            col = pt.y + colNum[i]
+            visited[curr.x][curr.y] = True
+            # Otherwise enqueue its neighbour points
+            for i in range(4):
 
-            # if neighbour point is valid, has path
-            # and not visited yet, enqueue it.
-            if (isValid(row, col, visited)):
-                visited[row][col] = True
-                childPoint = Point(row, col, float(map[row][col]))
-                childPoint.addHead(pt)
+                row = curr.x + rowNum[i]
+                col = curr.y + colNum[i]
 
-                childPoint.addHeuristic(end, heuristic)
 
-                nextPoint = queueNode(childPoint, curr.dist + calculateCost(curr.pt, childPoint) + childPoint.heuristic)
-                q.append(nextPoint)
+                # if neighbour point is valid, has path
+                # and not visited yet, enqueue it.
+                if (isValid(row, col, visited) and not isinstance(curr.g, Point)):
+
+                    childPoint = Point(row, col, float(map[row][col]))
+                    childPoint.addHead(curr)
+
+                    childPoint.addG(calculateCost(curr, childPoint) + curr.g)
+                    childPoint.addHeuristic(end, heuristic)
+                    childPoint.updateFValue(childPoint.g + childPoint.heuristic)
+
+
+                    for p in q:
+                        if( isinstance(p.g, Point)):
+                            continue
+                        if (childPoint == p and childPoint.g < p.g):
+                            p.updatePoint(childPoint.g, childPoint.head)
+
+                    q.append(childPoint)
+
+
 
         # Return -1 if end point cannot be reached
     return -1.0
@@ -193,7 +206,7 @@ def main():
         fValue = ucs(map, start, end)
     elif (algorithm.lower() == "astar"):
         # add hueristic for start point
-        start.addHeuristic(end, heuristic)
+        start.addHeuristic(end,heuristic)
         fValue = aStart(map, start, end)
 
 
