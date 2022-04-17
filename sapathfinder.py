@@ -11,13 +11,13 @@ mapFile = argv[1]
 # specifies the initial path to a map
 init = argv[2]
 #  initial  temperature
-tini = argv[3]
+tini = float(argv[3])
 #  final temperature
-tfin = argv[4]
+tfin = float(argv[4])
 #  cooling rate
-alpha = argv[5]
+alpha = float(argv[5])
 # segment length
-d = argv[6]
+d = int(argv[6])
 
 
 # mapFile = open(map, "r")
@@ -40,13 +40,13 @@ for pointer in range(3, len(lines)):
 
 # Function to check if a next point
 # is be visited or not and valid
-def isValid( row, col, visited):
+def isValid( row, col,vistedMap):
     # Check if cell is not on map
     if (row < 0 or col < 0 or row >= rowSize or col >= colSize):
         return False
 
     # Check if cell is already visited
-    if (visited[row][col]):
+    if (vistedMap[row][col]):
         return False
 
     if ( map[row][col].lower() == 'x'):
@@ -59,11 +59,10 @@ def isValid( row, col, visited):
 class Point:
     g = 0.0
     head = None
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: float, y: float, val: float):
         self.x = x
         self.y = y
-
-
+        self.val = val
 
     def __lt__(self, other):
         return self.g < other.g
@@ -86,19 +85,13 @@ class Point:
         self.g = gcost
 
 
-# Draw path function
-def drawPath(pt: Point):
-    path = deque()
-    path.append(pt)
-    counter = 0
-    while path:
-        pointer = path.popleft()
-        map[pointer.x][pointer.y] = '*'
-        if (pointer.head != None):
-            path.append(pointer.head)
-        else:
-            break
-        counter += 1
+#Calculate cost
+def calculateCost(curr: Point, next: Point):
+
+    if(curr.val < next.val):
+        return 1.0 + next.val - curr.val
+
+    return 1.0
 
 
 # Print map function
@@ -111,10 +104,8 @@ def printMap(map):
                 print(map[i][j], end = ' ')
 
 
-def resetVisit(adjustPath):
-
-    for node in adjustPath:
-        vistedMap[node.x][node.y] = False
+def resetVisit(map):
+    map = [[False for i in range(colSize)] for i in range(rowSize)][:]
 
 
 # These arrays are used to get next cells in 4 direction Up, Down, Left Right
@@ -126,12 +117,13 @@ startX = int(lines[1].split(" ")[0]) -1
 startY = int(lines[1].split(" ")[1]) -1
 endX = int(lines[2].split(" ")[0]) -1
 endY = int(lines[2].split(" ")[1]) -1
+# Init start and end variable
+start = Point(startX, startY, int(map[startX][startY]))
+end = Point(endX, endY, int(map[endX][endY]))
 
-
-vistedMap = [[False for i in range(colSize)] for i in range(rowSize)]
 
 def changeDirectionOrder():
-    directionL = ['U', 'D', 'L','R']
+    directionL = ['U', 'D', 'R','L']
 
     for i in range(0,4):
         direct = directionL.pop(rand.randrange(len(directionL)))
@@ -149,14 +141,14 @@ def changeDirectionOrder():
             rowNum[i] = 0
             colNum[i] = 1
 
+def visitedMapGenerator():
+    return [[False for i in range(colSize)] for i in range(rowSize)]
 
 # Breadth first search function
-def bfs(start: Point, end: Point):
-
-    # Declare the visited array
+def bfs(start: Point, end: Point, vMap):
 
     # Marked start point
-    vistedMap[start.x][start.y] = True
+    vMap[start.x][start.y] = True
 
     # Create a queue
     q = []
@@ -169,8 +161,8 @@ def bfs(start: Point, end: Point):
         curr = q.pop(0)  # Dequeue the front point
 
         if curr.x == end.x and curr.y == end.y:
-            # drawPath(curr)
             return curr
+
 
         # Otherwise enqueue its neighbour points
         for i in range(4):
@@ -179,16 +171,16 @@ def bfs(start: Point, end: Point):
 
             # if neighbour point is valid, has path
             # and not visited yet, enqueue it.
-            if (isValid(row, col, vistedMap)):
-
-                childPoint = Point(row, col, 1)
+            if (isValid(row, col,vMap)):
+                vMap[row][col] = True
+                childPoint = Point(row, col, int(map[row][col]))
                 childPoint.addHead(curr)
-                childPoint.addG(curr.g + 1)
+                childPoint.addG(curr.g + calculateCost(curr,childPoint))
                 q.append(childPoint)
 
         # Return -1 if destination cannot be reached
 
-    return None
+    return Point(endX + 1,endY + 1 ,endX)
 
 
 def pathToList(pt: Point):
@@ -198,85 +190,94 @@ def pathToList(pt: Point):
     while path:
         pointer = path.popleft()
         sequence.append(pointer)
-        if (pointer.head != None):
+        if(isinstance(pointer, Point)):
             path.append(pointer.head)
         else:
             break
 
-    return sequence
+    return sequence[0:len(sequence) -1]
 
-def randomPathAjust(path, d: int):
+def updateVisited(vMap, path, sBreak, eBreak):
 
-    randNo = rand.randint(0,len(path))
+    for i in range(0, len(path)):
+        if( i < sBreak  or i > eBreak):
+            vMap[path[i].x][path[i].y] = True
+
+
+def randomPathAjust(path, d: int,):
+
+    randNo = rand.randint(0,len(path) - 1)
     endNo = randNo + d if randNo + d < len(path) else len(path) - 1
+    vMap = visitedMapGenerator()
 
     sPoint = path[randNo]
     ePoint = path[endNo]
 
-    changeDirectionOrder()
-    resetVisit(path[randNo:endNo])
-    adjustPath = pathToList(bfs(map, sPoint, ePoint))
+    resetVisit(vMap)
+    updateVisited(vMap, path, randNo, endNo)
 
-    newPath = path[0:sPoint].copy()
-    newPath.extend(adjustPath)
+    newPath = pathToList(bfs(sPoint, ePoint,vMap))[::-1]
 
     if(endNo != len(path) - 1 ):
         rightPart = path[endNo + 1: len(path)]
         previousNode = newPath[len(newPath) - 1]
         for node in rightPart:
-            node.updatePoint(previousNode, previousNode.g + 1)
+            if(isinstance(previousNode, Point)):
+                node.updatePoint(previousNode, previousNode.g + calculateCost(previousNode,node))
 
-            newPath.append(node)
-            previousNode = node
+                newPath.append(node)
+                previousNode = node
 
     return newPath
 
 def annealing(path, tList, cList):
     current_temp = tini
-    solution = path
+    current = path
 
     while current_temp > tfin:
 
         tList.append(current_temp)
-        cList.append(solution[len(solution) - 1])
+        cList.append(current[len(current) - 1].g)
 
-        tempPath = randomPathAjust(solution, d)
-        costDiff = solution[len(solution) - 1].g - tempPath[len(tempPath) - 1].g
+        # Random direction
+        changeDirectionOrder()
+        propose = randomPathAjust(current, d)
+        costDiff = current[len(current) - 1].g - propose[len(propose) - 1].g
 
         if costDiff > 0:
-            solution = tempPath
+            current = propose
         else:
-            if(rand.random(0,1) < mt.exp(-costDiff/ current_temp)):
-                solution = tempPath
+            try:
+                if(rand.uniform(0,1)< mt.exp(costDiff/current_temp)):
+                    current = propose
+            except OverflowError:
+                if (rand.uniform(0,1) < float('inf')):
+                    current = propose
 
-        current_temp -= alpha
+
+        current_temp *= alpha
 
 
-    return solution
+    return current
 
 # Driver code
 def main():
+    vistedMap = visitedMapGenerator()
 
-    # Init some variable
-    start = Point(startX, startY, float(map[startX][startY]))
-    end = Point(endX, endY, float(map[endX][endY]))
+    path = pathToList(bfs(start, end, vistedMap))[::-1]
 
-    path = pathToList(bfs(map, start, end))
     temperature, cost = [],[]
 
-
     optimised = annealing(path, temperature, cost)
+
     # Print map and tempList and costList
     for pt in optimised:
         map[pt.x][pt.y] = "*"
 
     printMap(map)
-    for i in range(0,len(temperature)):
-        print("T = ", temperature[i], ", cost = ", cost[i])
 
-    # if fValue != -1.0:
-    #     printMap(map)
-    # else:
-    #     print("null")
+    for i in range(0,len(temperature)):
+        print('T = {temp:.6f}, cost = {cost}'.format(temp = temperature[i], cost = int(cost[i])))
+
 
 main()
